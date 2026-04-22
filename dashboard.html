@@ -264,74 +264,44 @@ async function loadWeather() {
     const data = await resp.json();
     const cur = data.current_condition[0];
     const area = data.nearest_area?.[0]?.areaName?.[0]?.value || '';
+    const lat = data.nearest_area?.[0]?.latitude || '';
+    const lon = data.nearest_area?.[0]?.longitude || '';
     document.getElementById('weather-icon').textContent = WEATHER_ICONS[cur.weatherCode] || '🌡️';
     document.getElementById('weather-temp').textContent = `${cur.temp_F}°F`;
     document.getElementById('weather-desc').textContent = `${cur.weatherDesc[0].value}${area ? ' — ' + area : ''}`;
     document.getElementById('weather-detail').textContent = `Humidity: ${cur.humidity}% · Wind: ${cur.windspeedMiles} mph`;
 
-    // Build 6-day forecast (today + next 5 days from wttr.in's 3-day data, plus extra fetch)
-    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const forecastEl = document.getElementById('forecast-row');
-    const forecasts = [];
-
-    // Today from current conditions
-    const today = new Date();
-    forecasts.push({
-      label: 'Today',
-      icon: WEATHER_ICONS[cur.weatherCode] || '🌡️',
-      hi: data.weather[0].maxtempF,
-      lo: data.weather[0].mintempF,
-      desc: cur.weatherDesc[0].value,
-    });
-
-    // Days from wttr.in weather array (indices 1, 2 are tomorrow, day after)
-    for (let i = 1; i < data.weather.length && forecasts.length < 6; i++) {
-      const w = data.weather[i];
-      const d = new Date(w.date);
-      const hourly = w.hourly?.[4] || w.hourly?.[0]; // midday or first
-      forecasts.push({
-        label: days[d.getDay()],
-        icon: WEATHER_ICONS[hourly?.weatherCode] || '🌤️',
-        hi: w.maxtempF,
-        lo: w.mintempF,
-        desc: hourly?.weatherDesc?.[0]?.value || '',
-      });
-    }
-
-    // Fetch additional days if we have fewer than 6
-    if (forecasts.length < 6) {
+    // 7-day forecast from Open-Meteo (free, no key, CORS-enabled)
+    if (lat && lon) {
       try {
-        const resp2 = await fetch('https://wttr.in/?format=j1&n');
-        if (resp2.ok) {
-          const data2 = await resp2.json();
-          for (let i = 0; i < data2.weather.length && forecasts.length < 6; i++) {
-            const w = data2.weather[i];
-            const d = new Date(w.date);
-            if (d <= today) continue;
-            const exists = forecasts.some(f => f.label === days[d.getDay()]);
-            if (exists) continue;
-            const hourly = w.hourly?.[4] || w.hourly?.[0];
-            forecasts.push({
-              label: days[d.getDay()],
-              icon: WEATHER_ICONS[hourly?.weatherCode] || '🌤️',
-              hi: w.maxtempF,
-              lo: w.mintempF,
-              desc: hourly?.weatherDesc?.[0]?.value || '',
-            });
-          }
+        const fResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&temperature_unit=fahrenheit&timezone=auto&forecast_days=7`);
+        if (fResp.ok) {
+          const fData = await fResp.json();
+          const daily = fData.daily;
+          const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+          const wmoIcons = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌧️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'❄️',95:'⛈️',96:'⛈️',99:'⛈️'};
+          const wmoDesc = {0:'Clear',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',48:'Fog',51:'Light Drizzle',53:'Drizzle',55:'Heavy Drizzle',56:'Freezing Drizzle',57:'Freezing Drizzle',61:'Light Rain',63:'Rain',65:'Heavy Rain',66:'Freezing Rain',67:'Freezing Rain',71:'Light Snow',73:'Snow',75:'Heavy Snow',77:'Snow Grains',80:'Light Showers',81:'Showers',82:'Heavy Showers',85:'Snow Showers',86:'Heavy Snow',95:'Thunderstorm',96:'Hail Storm',99:'Hail Storm'};
+          const forecastEl = document.getElementById('forecast-row');
+          // Show today + next 5 days = 6 total
+          forecastEl.innerHTML = daily.time.slice(0, 6).map((dateStr, i) => {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const dt = new Date(y, m - 1, d);
+            const label = i === 0 ? 'Today' : days[dt.getDay()];
+            const code = daily.weathercode[i];
+            const icon = wmoIcons[code] || '🌡️';
+            const desc = wmoDesc[code] || '';
+            const hi = Math.round(daily.temperature_2m_max[i]);
+            const lo = Math.round(daily.temperature_2m_min[i]);
+            return `<div class="forecast-day">
+              <div class="fc-label">${label}</div>
+              <div class="fc-icon">${icon}</div>
+              <div class="fc-temp">${hi}°/${lo}°</div>
+              <div class="fc-desc" title="${desc}">${desc}</div>
+            </div>`;
+          }).join('');
         }
-      } catch(e) {}
+      } catch(e) { console.warn('Forecast failed:', e); }
     }
-
-    forecastEl.innerHTML = forecasts.map(f =>
-      `<div class="forecast-day">
-        <div class="fc-label">${f.label}</div>
-        <div class="fc-icon">${f.icon}</div>
-        <div class="fc-temp">${f.hi}°/${f.lo}°</div>
-        <div class="fc-desc" title="${f.desc}">${f.desc}</div>
-      </div>`
-    ).join('');
-
   } catch (e) {
     document.getElementById('weather-icon').textContent = '❓';
     document.getElementById('weather-desc').textContent = 'Weather unavailable';
@@ -362,12 +332,12 @@ setInterval(updateClocks, 1000);
 // ============================================================
 const NEWS_ITEMS = {
   'pqc-news': [
-    { title: 'NIST Finalizes First Three Post-Quantum Cryptography Standards', desc: 'The National Institute of Standards and Technology has officially published ML-KEM, ML-DSA, and SLH-DSA as federal standards for quantum-resistant encryption. Organizations are now urged to begin transitioning away from RSA and ECC before large-scale quantum computers render them obsolete.', link: 'https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards' },
-    { title: 'Google Chrome Begins Testing Hybrid Post-Quantum Key Agreement', desc: 'Google has enabled X25519Kyber768 hybrid key exchange by default in Chrome, combining classical and quantum-resistant algorithms for TLS connections. The move protects against "harvest now, decrypt later" attacks where adversaries store encrypted traffic for future quantum decryption.', link: 'https://blog.chromium.org' },
-    { title: 'Signal Upgrades Protocol With PQXDH for Quantum-Resistant Messaging', desc: 'The Signal messaging app has integrated the PQXDH key agreement protocol, layering the CRYSTALS-Kyber lattice-based algorithm on top of its existing X3DH handshake. This makes Signal one of the first major consumer platforms to deploy post-quantum protections for end-to-end encrypted chat.', link: 'https://signal.org/blog/pqxdh/' },
-    { title: 'Cloudflare Reports 2% of TLS Traffic Now Uses Post-Quantum Key Exchange', desc: 'Post-quantum adoption is accelerating faster than expected, driven primarily by Chrome and Firefox enabling hybrid key agreements by default. Cloudflare notes the overhead is minimal—roughly 800 extra bytes per handshake—making the transition nearly invisible to end users.', link: 'https://blog.cloudflare.com' },
-    { title: 'CISA Publishes Migration Roadmap for Federal Post-Quantum Transition', desc: 'The Cybersecurity and Infrastructure Security Agency has released a detailed timeline requiring all federal agencies to inventory their cryptographic assets by 2025 and complete migration to quantum-resistant algorithms by 2035. The roadmap prioritizes systems handling classified data and critical infrastructure.', link: 'https://www.cisa.gov/quantum' },
-    { title: 'Researchers Discover Side-Channel Vulnerability in Early Kyber Implementations', desc: 'A team from ETH Zurich demonstrated a timing attack that can extract secret keys from certain unpatched CRYSTALS-Kyber implementations running on ARM processors. The vulnerability has been fixed in the reference implementation, but the finding highlights the importance of constant-time coding practices during PQC rollouts.', link: 'https://pqshield.com/resources/' },
+    { title: 'Q-Day Just Got Closer: Three Papers Rewrite the Quantum Threat Timeline', desc: 'In less than a year, three major research papers have slashed the estimated qubits needed to break RSA-2048 from 20 million down to under 100,000. Some findings were so sensitive that authors published only proofs, not full details, to prevent misuse.', link: 'https://thequantuminsider.com/2026/03/31/q-day-just-got-closer-three-papers-in-three-months-are-rewriting-the-quantum-threat-timeline/' },
+    { title: 'Google Deploys Post-Quantum Cryptography Across Android 17', desc: 'Google is rolling out NIST-standard PQC algorithms into Android\'s core security stack, including secure boot and app-level protections. The company urged governments and industries to accelerate migration, citing quantum error-correction milestones and the "harvest now, decrypt later" threat.', link: 'https://security.googleblog.com/2026/03/post-quantum-cryptography-in-android.html' },
+    { title: 'NSA CNSA 2.0 Mandate: Quantum-Safe Algorithms Required for National Security by 2027', desc: 'The NSA\'s updated Commercial National Security Algorithm Suite now requires all new national security systems to use quantum-resistant cryptography by January 2027. Agencies must complete full migration plans and begin deploying ML-KEM and ML-DSA across classified networks.', link: 'https://www.graygroupintl.com/blog/post-quantum-cryptography-enterprise-guide/' },
+    { title: 'Cloudflare and Google Set 2029 Deadline for Full Post-Quantum TLS Migration', desc: 'Both companies announced accelerated timelines to make all TLS connections quantum-resistant by 2029, driven by the rapid pace of quantum computing advances. Cloudflare reports hybrid PQC key exchange overhead remains minimal at roughly 800 extra bytes per handshake.', link: 'https://postquantum.com/quantum-security-pqc-news/' },
+    { title: 'CA/Browser Forum Shortens Certificate Lifecycles to Drive PQC Adoption', desc: 'New rules drastically reduce SSL/TLS certificate validity periods, forcing organizations to modernize their certificate infrastructure. The change is designed to align with post-quantum migration goals and ensure crypto-agility becomes standard practice across the industry.', link: 'https://vmblog.com/prediction/2026-the-year-of-post-quantum-cryptography-projects/' },
+    { title: 'PQCrypto 2026 Workshop Highlights New Lattice and Code-Based Attack Research', desc: 'The 17th International PQC Workshop in Saint-Malo, France featured papers on improved lattice reduction techniques, isogeny-based vulnerabilities, and practical challenges of migrating enterprise systems to quantum-resistant protocols at scale.', link: 'https://link.springer.com/book/10.1007/978-3-032-22698-3' },
   ],
   'security-news': [
     { title: 'Critical Zero-Day in Palo Alto Networks Firewalls Actively Exploited', desc: 'Threat actors are chaining two vulnerabilities in PAN-OS to achieve unauthenticated remote code execution on GlobalProtect gateways. CISA has added the flaws to its Known Exploited Vulnerabilities catalog and is urging immediate patching across all affected devices.', link: 'https://thehackernews.com' },
