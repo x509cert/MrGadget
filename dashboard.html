@@ -67,6 +67,12 @@ body {
 .top-bar .weather-temp { font-size: 22px; font-weight: 700; color: var(--text); }
 .top-bar .weather-desc { font-size: 13px; color: var(--muted); }
 .top-bar .weather-detail { font-size: 11px; color: var(--muted); }
+.forecast-row { display: flex; align-items: center; gap: 6px; margin-left: 10px; }
+.forecast-day { text-align: center; padding: 4px 6px; border-radius: 6px; background: var(--card-inner); min-width: 52px; }
+.forecast-day .fc-label { font-size: 9px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+.forecast-day .fc-icon { font-size: 16px; line-height: 1.2; }
+.forecast-day .fc-temp { font-size: 11px; font-weight: 600; color: var(--text); }
+.forecast-day .fc-desc { font-size: 8px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56px; }
 
 .theme-toggle {
   background: var(--card-inner); border: 1px solid var(--border); border-radius: 8px;
@@ -165,6 +171,7 @@ body {
       <div class="weather-desc" id="weather-desc">Loading weather…</div>
       <div class="weather-detail" id="weather-detail"></div>
     </div>
+    <div class="forecast-row" id="forecast-row"></div>
   </div>
   <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">🌙</button>
   <div class="refresh-counter" id="refresh-counter" title="Auto-refresh countdown">⟳ 90s</div>
@@ -258,9 +265,73 @@ async function loadWeather() {
     const cur = data.current_condition[0];
     const area = data.nearest_area?.[0]?.areaName?.[0]?.value || '';
     document.getElementById('weather-icon').textContent = WEATHER_ICONS[cur.weatherCode] || '🌡️';
-    document.getElementById('weather-temp').textContent = `${cur.temp_F}°F / ${cur.temp_C}°C`;
+    document.getElementById('weather-temp').textContent = `${cur.temp_F}°F`;
     document.getElementById('weather-desc').textContent = `${cur.weatherDesc[0].value}${area ? ' — ' + area : ''}`;
     document.getElementById('weather-detail').textContent = `Humidity: ${cur.humidity}% · Wind: ${cur.windspeedMiles} mph`;
+
+    // Build 6-day forecast (today + next 5 days from wttr.in's 3-day data, plus extra fetch)
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const forecastEl = document.getElementById('forecast-row');
+    const forecasts = [];
+
+    // Today from current conditions
+    const today = new Date();
+    forecasts.push({
+      label: 'Today',
+      icon: WEATHER_ICONS[cur.weatherCode] || '🌡️',
+      hi: data.weather[0].maxtempF,
+      lo: data.weather[0].mintempF,
+      desc: cur.weatherDesc[0].value,
+    });
+
+    // Days from wttr.in weather array (indices 1, 2 are tomorrow, day after)
+    for (let i = 1; i < data.weather.length && forecasts.length < 6; i++) {
+      const w = data.weather[i];
+      const d = new Date(w.date);
+      const hourly = w.hourly?.[4] || w.hourly?.[0]; // midday or first
+      forecasts.push({
+        label: days[d.getDay()],
+        icon: WEATHER_ICONS[hourly?.weatherCode] || '🌤️',
+        hi: w.maxtempF,
+        lo: w.mintempF,
+        desc: hourly?.weatherDesc?.[0]?.value || '',
+      });
+    }
+
+    // Fetch additional days if we have fewer than 6
+    if (forecasts.length < 6) {
+      try {
+        const resp2 = await fetch('https://wttr.in/?format=j1&n');
+        if (resp2.ok) {
+          const data2 = await resp2.json();
+          for (let i = 0; i < data2.weather.length && forecasts.length < 6; i++) {
+            const w = data2.weather[i];
+            const d = new Date(w.date);
+            if (d <= today) continue;
+            const exists = forecasts.some(f => f.label === days[d.getDay()]);
+            if (exists) continue;
+            const hourly = w.hourly?.[4] || w.hourly?.[0];
+            forecasts.push({
+              label: days[d.getDay()],
+              icon: WEATHER_ICONS[hourly?.weatherCode] || '🌤️',
+              hi: w.maxtempF,
+              lo: w.mintempF,
+              desc: hourly?.weatherDesc?.[0]?.value || '',
+            });
+          }
+        }
+      } catch(e) {}
+    }
+
+    forecastEl.innerHTML = forecasts.map(f =>
+      `<div class="forecast-day">
+        <div class="fc-label">${f.label}</div>
+        <div class="fc-icon">${f.icon}</div>
+        <div class="fc-temp">${f.hi}°/${f.lo}°</div>
+        <div class="fc-desc" title="${f.desc}">${f.desc}</div>
+      </div>`
+    ).join('');
+
   } catch (e) {
     document.getElementById('weather-icon').textContent = '❓';
     document.getElementById('weather-desc').textContent = 'Weather unavailable';
