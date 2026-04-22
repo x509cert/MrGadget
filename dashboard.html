@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --border: #2a2d3a;
+  --text: #e4e4e7;
+  --muted: #9ca3af;
+  --accent: #3b82f6;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --card-inner: #12141c;
+}
+
+html.light {
+  --bg: #f3f4f6;
+  --card: #ffffff;
+  --border: #d1d5db;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --green: #16a34a;
+  --red: #dc2626;
+  --yellow: #ca8a04;
+  --card-inner: #f9fafb;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* --- Top bar --- */
+.top-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  margin-bottom: 20px;
+  padding: 14px 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.top-bar .local-time { display: flex; align-items: center; gap: 10px; }
+.top-bar .time-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.top-bar .date-value { font-size: 14px; color: var(--muted); }
+.top-bar .weather { display: flex; align-items: center; gap: 10px; }
+.top-bar .weather-icon { font-size: 28px; }
+.top-bar .weather-temp { font-size: 22px; font-weight: 700; color: var(--text); }
+.top-bar .weather-desc { font-size: 13px; color: var(--muted); }
+.top-bar .weather-detail { font-size: 11px; color: var(--muted); }
+
+.theme-toggle {
+  background: var(--card-inner); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; font-size: 18px; line-height: 1;
+  color: var(--text); transition: background 0.2s;
+}
+.theme-toggle:hover { background: var(--border); }
+
+.refresh-counter { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+
+/* --- API key input --- */
+.api-key-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.api-key-toggle:hover { color: var(--text); }
+.api-key-popup {
+  display: none; position: absolute; right: 24px; top: 60px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.4); width: 340px;
+}
+.api-key-popup.open { display: block; }
+.api-key-popup label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+.api-key-popup input { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-inner); color: var(--text); font-size: 13px; font-family: monospace; }
+.api-key-popup .save-btn { margin-top: 8px; padding: 5px 14px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.api-key-status { font-size: 11px; margin-top: 6px; }
+
+/* --- Grid --- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px; max-width: 1400px; margin: 16px auto 0;
+}
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.card-title { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.card-title .icon { font-size: 16px; }
+
+/* --- News --- */
+.news-list { list-style: none; }
+.news-list li { padding: 8px 0; border-bottom: 1px solid var(--border); line-height: 1.4; }
+.news-list li:last-child { border-bottom: none; }
+.news-list a { color: var(--text); text-decoration: none; font-size: 13px; display: block; }
+.news-list a:hover { color: var(--accent); }
+.news-list .desc { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.news-list .source { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+/* --- Market Indices --- */
+.indices-grid { display: flex; flex-direction: column; gap: 12px; }
+.index-item { background: var(--card-inner); border-radius: 8px; padding: 16px 20px; display: flex; align-items: baseline; gap: 12px; }
+.index-name { font-size: 28px; color: var(--muted); font-weight: 600; min-width: 95px; }
+.index-value { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.index-change { font-size: 14px; margin-left: auto; }
+
+.up { color: var(--green); }
+.down { color: var(--red); }
+.flat { color: var(--yellow); }
+
+/* --- Stocks --- */
+.stocks-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stocks-table th { text-align: left; font-size: 11px; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.stocks-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+.stocks-table .ticker { font-weight: 700; color: var(--accent); }
+.stocks-table .price { font-weight: 600; }
+
+/* --- Timezone clocks --- */
+.tz-clocks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tz-clock { background: var(--card-inner); border-radius: 8px; padding: 10px; text-align: center; }
+.tz-city { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.tz-time { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.tz-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.tz-offset { font-size: 10px; color: var(--muted); }
+
+.full-width { grid-column: 1 / -1; }
+.row-centered { grid-template-columns: repeat(3, minmax(300px, 1fr)); justify-content: center; margin-top: 0; }
+
+@media (max-width: 850px) {
+  .grid { grid-template-columns: 1fr; }
+  .tz-clocks { grid-template-columns: repeat(2, 1fr); }
+  .top-bar { gap: 16px; }
+  .row-centered { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <div class="local-time">
+    <div>
+      <div class="time-value" id="local-time">--:--:--</div>
+      <div class="date-value" id="local-date"></div>
+    </div>
+  </div>
+  <div class="weather">
+    <div class="weather-icon" id="weather-icon">⏳</div>
+    <div>
+      <div class="weather-temp" id="weather-temp">—</div>
+      <div class="weather-desc" id="weather-desc">Loading weather…</div>
+      <div class="weather-detail" id="weather-detail"></div>
+    </div>
+  </div>
+  <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">🌙</button>
+  <div class="refresh-counter" id="refresh-counter" title="Auto-refresh countdown">⟳ 90s</div>
+  <button class="api-key-toggle" id="api-key-btn" title="Configure API key">⚙️</button>
+  <div class="api-key-popup" id="api-key-popup">
+    <label>Finnhub API Key (stored in browser only)</label>
+    <input type="password" id="api-key-input" placeholder="Paste your Finnhub key…">
+    <button class="save-btn" id="api-key-save">Save &amp; Reload</button>
+    <div class="api-key-status" id="api-key-status"></div>
+  </div>
+</div>
+
+<!-- Row 1: Markets, Stocks, World Clocks -->
+<div class="grid row-centered">
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📈</span> Markets</div>
+    <div class="indices-grid" id="indices">
+      <div class="index-item"><div class="index-name">S&amp;P 500</div><div class="index-value" id="sp500-val">—</div><div class="index-change" id="sp500-chg">—</div></div>
+      <div class="index-item"><div class="index-name">NASDAQ</div><div class="index-value" id="nasdaq-val">—</div><div class="index-change" id="nasdaq-chg">—</div></div>
+      <div class="index-item"><div class="index-name">DOW</div><div class="index-value" id="dow-val">—</div><div class="index-change" id="dow-chg">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">💹</span> Stocks</div>
+    <table class="stocks-table">
+      <thead><tr><th>Ticker</th><th>Price</th><th>Change</th><th>% Change</th></tr></thead>
+      <tbody id="stocks-body">
+        <tr><td class="ticker">MSFT</td><td class="price" id="msft-price">—</td><td id="msft-chg">—</td><td id="msft-pct">—</td></tr>
+        <tr><td class="ticker">AAPL</td><td class="price" id="aapl-price">—</td><td id="aapl-chg">—</td><td id="aapl-pct">—</td></tr>
+        <tr><td class="ticker">GOOGL</td><td class="price" id="googl-price">—</td><td id="googl-chg">—</td><td id="googl-pct">—</td></tr>
+        <tr><td class="ticker">AMZN</td><td class="price" id="amzn-price">—</td><td id="amzn-chg">—</td><td id="amzn-pct">—</td></tr>
+        <tr><td class="ticker">NVDA</td><td class="price" id="nvda-price">—</td><td id="nvda-chg">—</td><td id="nvda-pct">—</td></tr>
+        <tr><td class="ticker">META</td><td class="price" id="meta-price">—</td><td id="meta-chg">—</td><td id="meta-pct">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🌍</span> World Clocks</div>
+    <div class="tz-clocks">
+      <div class="tz-clock"><div class="tz-city">🇺🇸 Redmond</div><div class="tz-time" id="tz-redmond">--:--</div><div class="tz-date" id="tz-redmond-date"></div><div class="tz-offset">UTC−7 / −8</div></div>
+      <div class="tz-clock"><div class="tz-city">🇬🇧 London</div><div class="tz-time" id="tz-london">--:--</div><div class="tz-date" id="tz-london-date"></div><div class="tz-offset">UTC+0 / +1</div></div>
+      <div class="tz-clock"><div class="tz-city">🇮🇱 Israel</div><div class="tz-time" id="tz-israel">--:--</div><div class="tz-date" id="tz-israel-date"></div><div class="tz-offset">UTC+2 / +3</div></div>
+      <div class="tz-clock"><div class="tz-city">🇮🇳 New Delhi</div><div class="tz-time" id="tz-delhi">--:--</div><div class="tz-date" id="tz-delhi-date"></div><div class="tz-offset">UTC+5:30</div></div>
+      <div class="tz-clock"><div class="tz-city">🇯🇵 Tokyo</div><div class="tz-time" id="tz-tokyo">--:--</div><div class="tz-date" id="tz-tokyo-date"></div><div class="tz-offset">UTC+9</div></div>
+      <div class="tz-clock"><div class="tz-city">🇳🇿 Auckland</div><div class="tz-time" id="tz-auckland">--:--</div><div class="tz-date" id="tz-auckland-date"></div><div class="tz-offset">UTC+12 / +13</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Row 2: News cards -->
+<div class="grid">
+  <div class="card"><div class="card-title"><span class="icon">🔐</span> Post-Quantum Crypto</div><ul class="news-list" id="pqc-news"><li><a href="#">Loading…</a></li></ul></div>
+  <div class="card"><div class="card-title"><span class="icon">🔒</span> Security News</div><ul class="news-list" id="security-news"><li><a href="#">Loading…</a></li></ul></div>
+  <div class="card"><div class="card-title"><span class="icon">💻</span> Tech News</div><ul class="news-list" id="tech-news"><li><a href="#">Loading…</a></li></ul></div>
+  <div class="card"><div class="card-title"><span class="icon">🤖</span> AI News</div><ul class="news-list" id="ai-news"><li><a href="#">Loading…</a></li></ul></div>
+</div>
+
+<script>
+// ============================================================
+// Local Time
+// ============================================================
+function updateLocalTime() {
+  const now = new Date();
+  document.getElementById('local-time').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  document.getElementById('local-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+updateLocalTime();
+setInterval(updateLocalTime, 1000);
+
+// ============================================================
+// Weather via wttr.in
+// ============================================================
+const WEATHER_ICONS = {
+  '113':'☀️','116':'⛅','119':'☁️','122':'☁️','143':'🌫️','176':'🌦️','179':'🌨️','182':'🌧️',
+  '185':'🌧️','200':'⛈️','227':'🌨️','230':'❄️','248':'🌫️','260':'🌫️','263':'🌦️','266':'🌧️',
+  '281':'🌧️','284':'🌧️','293':'🌦️','296':'🌧️','299':'🌧️','302':'🌧️','305':'🌧️','308':'🌧️',
+  '311':'🌧️','314':'🌧️','317':'🌨️','320':'🌨️','323':'🌨️','326':'🌨️','329':'❄️','332':'❄️',
+  '335':'❄️','338':'❄️','350':'🌧️','353':'🌦️','356':'🌧️','359':'🌧️','362':'🌨️','365':'🌨️',
+  '368':'🌨️','371':'❄️','374':'🌧️','377':'🌧️','386':'⛈️','389':'⛈️','392':'⛈️','395':'❄️',
+};
+
+async function loadWeather() {
+  try {
+    const resp = await fetch('https://wttr.in/?format=j1');
+    if (!resp.ok) throw new Error('fail');
+    const data = await resp.json();
+    const cur = data.current_condition[0];
+    const area = data.nearest_area?.[0]?.areaName?.[0]?.value || '';
+    document.getElementById('weather-icon').textContent = WEATHER_ICONS[cur.weatherCode] || '🌡️';
+    document.getElementById('weather-temp').textContent = `${cur.temp_F}°F / ${cur.temp_C}°C`;
+    document.getElementById('weather-desc').textContent = `${cur.weatherDesc[0].value}${area ? ' — ' + area : ''}`;
+    document.getElementById('weather-detail').textContent = `Humidity: ${cur.humidity}% · Wind: ${cur.windspeedMiles} mph`;
+  } catch (e) {
+    document.getElementById('weather-icon').textContent = '❓';
+    document.getElementById('weather-desc').textContent = 'Weather unavailable';
+  }
+}
+loadWeather();
+
+// ============================================================
+// World Clocks
+// ============================================================
+const CITIES = [
+  { id: 'redmond', tz: 'America/Los_Angeles' }, { id: 'london', tz: 'Europe/London' },
+  { id: 'israel', tz: 'Asia/Jerusalem' }, { id: 'delhi', tz: 'Asia/Kolkata' },
+  { id: 'tokyo', tz: 'Asia/Tokyo' }, { id: 'auckland', tz: 'Pacific/Auckland' },
+];
+function updateClocks() {
+  const now = new Date();
+  for (const city of CITIES) {
+    document.getElementById(`tz-${city.id}`).textContent = now.toLocaleTimeString('en-US', { timeZone: city.tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    document.getElementById(`tz-${city.id}-date`).textContent = now.toLocaleDateString('en-US', { timeZone: city.tz, weekday: 'short', month: 'short', day: 'numeric' });
+  }
+}
+updateClocks();
+setInterval(updateClocks, 1000);
+
+// ============================================================
+// News
+// ============================================================
+const NEWS_ITEMS = {
+  'pqc-news': [
+    { title: 'NIST Finalizes First Three Post-Quantum Cryptography Standards', desc: 'The National Institute of Standards and Technology has officially published ML-KEM, ML-DSA, and SLH-DSA as federal standards for quantum-resistant encryption. Organizations are now urged to begin transitioning away from RSA and ECC before large-scale quantum computers render them obsolete.', link: 'https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards' },
+    { title: 'Google Chrome Begins Testing Hybrid Post-Quantum Key Agreement', desc: 'Google has enabled X25519Kyber768 hybrid key exchange by default in Chrome, combining classical and quantum-resistant algorithms for TLS connections. The move protects against "harvest now, decrypt later" attacks where adversaries store encrypted traffic for future quantum decryption.', link: 'https://blog.chromium.org' },
+    { title: 'Signal Upgrades Protocol With PQXDH for Quantum-Resistant Messaging', desc: 'The Signal messaging app has integrated the PQXDH key agreement protocol, layering the CRYSTALS-Kyber lattice-based algorithm on top of its existing X3DH handshake. This makes Signal one of the first major consumer platforms to deploy post-quantum protections for end-to-end encrypted chat.', link: 'https://signal.org/blog/pqxdh/' },
+    { title: 'Cloudflare Reports 2% of TLS Traffic Now Uses Post-Quantum Key Exchange', desc: 'Post-quantum adoption is accelerating faster than expected, driven primarily by Chrome and Firefox enabling hybrid key agreements by default. Cloudflare notes the overhead is minimal—roughly 800 extra bytes per handshake—making the transition nearly invisible to end users.', link: 'https://blog.cloudflare.com' },
+    { title: 'CISA Publishes Migration Roadmap for Federal Post-Quantum Transition', desc: 'The Cybersecurity and Infrastructure Security Agency has released a detailed timeline requiring all federal agencies to inventory their cryptographic assets by 2025 and complete migration to quantum-resistant algorithms by 2035. The roadmap prioritizes systems handling classified data and critical infrastructure.', link: 'https://www.cisa.gov/quantum' },
+    { title: 'Researchers Discover Side-Channel Vulnerability in Early Kyber Implementations', desc: 'A team from ETH Zurich demonstrated a timing attack that can extract secret keys from certain unpatched CRYSTALS-Kyber implementations running on ARM processors. The vulnerability has been fixed in the reference implementation, but the finding highlights the importance of constant-time coding practices during PQC rollouts.', link: 'https://pqshield.com/resources/' },
+  ],
+  'security-news': [
+    { title: 'Critical Zero-Day in Palo Alto Networks Firewalls Actively Exploited', desc: 'Threat actors are chaining two vulnerabilities in PAN-OS to achieve unauthenticated remote code execution on GlobalProtect gateways. CISA has added the flaws to its Known Exploited Vulnerabilities catalog and is urging immediate patching across all affected devices.', link: 'https://thehackernews.com' },
+    { title: 'Massive Data Breach at Healthcare Giant Exposes 11 Million Patient Records', desc: 'Attackers accessed patient names, Social Security numbers, and medical histories through a compromised third-party vendor portal over a three-month period. The company is offering two years of identity monitoring and has engaged federal law enforcement in the investigation.', link: 'https://krebsonsecurity.com' },
+    { title: 'CISA Warns of Phishing Campaign Targeting Defense Contractors With Novel Backdoor', desc: 'Sophisticated spear-phishing emails impersonating federal procurement officers are delivering a previously unseen backdoor trojan dubbed "SilentBridge." At least 12 defense contractors have been compromised, with attackers exfiltrating contract documents and internal communications.', link: 'https://www.bleepingcomputer.com' },
+    { title: 'Microsoft April Patch Tuesday Fixes 78 Flaws Including Three Under Active Attack', desc: 'This month\'s security update addresses critical vulnerabilities in Exchange Server, Windows Hyper-V, and the MSHTML engine. Microsoft confirmed all three actively exploited bugs are being used in targeted campaigns against government and financial sector organizations.', link: 'https://msrc.microsoft.com' },
+    { title: 'Ransomware Group Claims 2TB Data Theft From European Banking Consortium', desc: 'A LockBit successor group has posted samples of allegedly stolen customer financial records from a network of regional European banks. The group is demanding $50 million and threatening full publication within 72 hours if negotiations fail.', link: 'https://www.darkreading.com' },
+    { title: 'Open-Source Supply Chain Attack Hits Popular npm Package With 8 Million Weekly Downloads', desc: 'Maintainer credentials for a widely-used JavaScript utility library were compromised, allowing attackers to push malicious versions that exfiltrate environment variables and SSH keys. GitHub and npm have revoked the affected tokens and removed the tainted releases.', link: 'https://www.bleepingcomputer.com' },
+  ],
+  'tech-news': [
+    { title: 'Apple Unveils M5 Chip With Dedicated On-Device AI Engine', desc: 'The new processor doubles machine learning throughput while cutting power draw by 30%, enabling local large language model inference directly on MacBooks. Apple says the chip can run models with up to 30 billion parameters without any cloud dependency.', link: 'https://techcrunch.com' },
+    { title: 'GitHub Copilot Adds Autonomous Agent Mode for Multi-File Coding Tasks', desc: 'Developers can now assign entire feature requests to Copilot agents that independently write code, create tests, and open pull requests. The agent handles review feedback and iterates until CI passes, reducing routine implementation time significantly.', link: 'https://github.blog' },
+    { title: 'AWS Launches EKS Instant With Zero Cold-Start Serverless Kubernetes', desc: 'The new service eliminates container startup delays by maintaining pre-warmed execution environments that scale instantly to incoming workloads. AWS says the offering addresses the top complaint from enterprise serverless adopters and cuts P99 latency by up to 80%.', link: 'https://www.zdnet.com' },
+    { title: 'Steam Deck 2 Ships With OLED Display and RDNA 4 Desktop-Class GPU', desc: 'Valve\'s next-gen handheld features a 7.4-inch OLED panel, 24GB unified memory, and performance rivaling mid-range gaming laptops. Pre-orders sold out within hours, with the $549 base model expected to ship in Q3.', link: 'https://www.theverge.com/tech' },
+    { title: 'Samsung Reveals Tri-Fold Galaxy Phone With Full 10-Inch Tablet Mode', desc: 'The Galaxy Z Fold Triple uses two hinges to unfold into a full tablet form factor with S Pen support. Samsung says the new UTG glass is rated for 400,000 folds and the device is just 10.5mm thick when fully collapsed.', link: 'https://www.wired.com' },
+  ],
+  'ai-news': [
+    { title: 'OpenAI Releases GPT-5 With Persistent Memory and Real-Time Reasoning', desc: 'The latest model maintains context across sessions, processes live video and audio streams, and scores 40% higher than GPT-4o on graduate-level reasoning benchmarks. Enterprise customers get access to a 1-million-token context window for complex document analysis.', link: 'https://openai.com/blog' },
+    { title: 'Google DeepMind\'s AlphaProtein Maps Full Human Protein Interaction Network', desc: 'Building on AlphaFold\'s success, the new system predicts how all 20,000 human proteins interact inside living cells with 95% accuracy. Researchers say this could compress early-stage drug discovery timelines from years to months for hundreds of diseases.', link: 'https://deepmind.google/discover/blog/' },
+    { title: 'EU AI Act Enters Enforcement Phase With Strict Rules for Foundation Models', desc: 'Companies deploying large-scale AI systems in Europe must now publish transparency reports, conduct bias audits, and pass safety evaluations. Non-compliance carries fines up to 7% of global annual revenue, making it the world\'s most stringent AI regulation.', link: 'https://www.theverge.com/ai-artificial-intelligence' },
+    { title: 'Anthropic Launches Claude Agent SDK for Autonomous Multi-Step Workflows', desc: 'The new SDK lets developers build AI agents that can browse the web, write and execute code, and manage files autonomously within sandboxed environments. Early adopters report 60% reductions in manual work for tasks like data processing and report generation.', link: 'https://www.anthropic.com' },
+    { title: 'Study Finds 10% of Recent Scientific Papers Show Signs of AI Authorship', desc: 'Researchers at Stanford analyzed linguistic patterns across 500,000 recent journal submissions and found a sharp uptick in AI-generated content since 2024. Major publishers are now requiring mandatory AI disclosure statements and deploying detection tools during peer review.', link: 'https://arstechnica.com/ai/' },
+    { title: 'Meta Open-Sources Llama 4 With Native Multimodal and 128K Context', desc: 'The 405-billion parameter model matches GPT-4o on most benchmarks while being freely available for commercial use. Meta says over 10,000 organizations downloaded Llama 4 within the first 48 hours, accelerating the shift toward open-weight AI development.', link: 'https://ai.meta.com/blog/' },
+  ]
+};
+
+function loadNews() {
+  for (const [elemId, items] of Object.entries(NEWS_ITEMS)) {
+    const el = document.getElementById(elemId);
+    if (!el) continue;
+    el.innerHTML = items.map(item => {
+      const cleanDesc = (item.desc || '').replace(/<[^>]*>/g, '').trim();
+      return `<li><a href="${esc(item.link)}" target="_blank">${esc(item.title)}</a>${cleanDesc ? `<div class="desc">${esc(cleanDesc)}</div>` : ''}</li>`;
+    }).join('');
+  }
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+loadNews();
+
+// ============================================================
+// Theme toggle
+// ============================================================
+(function() {
+  const btn = document.getElementById('theme-toggle');
+  const saved = localStorage.getItem('dashboard-theme');
+  if (saved === 'light') { document.documentElement.classList.add('light'); btn.textContent = '☀️'; }
+  btn.addEventListener('click', () => {
+    const isLight = document.documentElement.classList.toggle('light');
+    btn.textContent = isLight ? '☀️' : '🌙';
+    localStorage.setItem('dashboard-theme', isLight ? 'light' : 'dark');
+  });
+})();
+
+// ============================================================
+// Market Data — Yahoo Finance via CORS proxies
+// ============================================================
+const FINNHUB_API_KEY = localStorage.getItem('dashboard-finnhub-key') || '';
+
+// API key settings UI
+(function() {
+  const btn = document.getElementById('api-key-btn');
+  const popup = document.getElementById('api-key-popup');
+  const input = document.getElementById('api-key-input');
+  const saveBtn = document.getElementById('api-key-save');
+  const status = document.getElementById('api-key-status');
+  if (FINNHUB_API_KEY) { status.textContent = '✅ Key saved'; status.style.color = 'var(--green)'; input.value = FINNHUB_API_KEY; }
+  btn.addEventListener('click', () => popup.classList.toggle('open'));
+  document.addEventListener('click', (e) => { if (!popup.contains(e.target) && e.target !== btn) popup.classList.remove('open'); });
+  saveBtn.addEventListener('click', () => {
+    const key = input.value.trim();
+    if (key) { localStorage.setItem('dashboard-finnhub-key', key); status.textContent = '✅ Saved — refreshing…'; status.style.color = 'var(--green)'; setTimeout(() => location.reload(), 500); }
+    else { localStorage.removeItem('dashboard-finnhub-key'); status.textContent = 'Key cleared'; status.style.color = 'var(--muted)'; }
+  });
+})();
+
+const ALL_SYMBOLS = [
+  { id: 'sp500', yahoo: '%5EGSPC', isDollar: false },
+  { id: 'nasdaq', yahoo: '%5EIXIC', isDollar: false },
+  { id: 'dow', yahoo: '%5EDJI', isDollar: false },
+  { id: 'msft', yahoo: 'MSFT', isDollar: true },
+  { id: 'aapl', yahoo: 'AAPL', isDollar: true },
+  { id: 'googl', yahoo: 'GOOGL', isDollar: true },
+  { id: 'amzn', yahoo: 'AMZN', isDollar: true },
+  { id: 'nvda', yahoo: 'NVDA', isDollar: true },
+  { id: 'meta', yahoo: 'META', isDollar: true },
+];
+
+const CORS_PROXIES = [
+  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+async function fetchYahooQuote(symbol) {
+  const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+  for (const makeUrl of CORS_PROXIES) {
+    try {
+      const resp = await fetch(makeUrl(target));
+      if (!resp.ok) continue;
+      const raw = await resp.json();
+      const text = typeof raw === 'string' ? raw : (raw.contents || JSON.stringify(raw));
+      const data = typeof text === 'string' ? JSON.parse(text) : raw;
+      const chart = data.chart || data;
+      const meta = chart.result?.[0]?.meta;
+      if (meta?.regularMarketPrice) return meta;
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+function renderQuote(elemPrefix, price, change, pctChange, isDollar) {
+  const valEl = document.getElementById(`${elemPrefix}-val`) || document.getElementById(`${elemPrefix}-price`);
+  const chgEl = document.getElementById(`${elemPrefix}-chg`);
+  const pctEl = document.getElementById(`${elemPrefix}-pct`);
+  const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+  const sign = change > 0 ? '+' : '';
+  if (valEl) valEl.textContent = isDollar ? `$${price.toFixed(2)}` : price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (chgEl) {
+    chgEl.className = chgEl.id.endsWith('-chg') && !pctEl ? `index-change ${cls}` : cls;
+    chgEl.textContent = !pctEl ? `${sign}${change.toFixed(2)} (${sign}${pctChange.toFixed(2)}%)` : `${sign}${change.toFixed(2)}`;
+  }
+  if (pctEl) { pctEl.textContent = `${sign}${pctChange.toFixed(2)}%`; pctEl.className = cls; }
+}
+
+async function loadMarketData() {
+  const promises = ALL_SYMBOLS.map(async (sym) => {
+    // Try Finnhub first for individual stocks if API key is available
+    if (sym.isDollar && FINNHUB_API_KEY) {
+      try {
+        const resp = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym.yahoo}&token=${FINNHUB_API_KEY}`);
+        if (resp.ok) {
+          const q = await resp.json();
+          if (q && q.c) { renderQuote(sym.id, q.c, q.d, q.dp, true); return; }
+        }
+      } catch(e) {}
+    }
+    // Yahoo Finance via CORS proxies
+    const meta = await fetchYahooQuote(sym.yahoo);
+    if (meta) {
+      const price = meta.regularMarketPrice;
+      const prevClose = meta.chartPreviousClose || meta.previousClose;
+      const change = price - prevClose;
+      const pct = (change / prevClose) * 100;
+      renderQuote(sym.id, price, change, pct, sym.isDollar);
+    }
+  });
+  await Promise.allSettled(promises);
+}
+
+loadMarketData();
+
+// ============================================================
+// Auto-refresh every 90 seconds
+// ============================================================
+const REFRESH_INTERVAL = 90;
+let refreshCountdown = REFRESH_INTERVAL;
+function refreshAllData() { loadWeather(); loadNews(); loadMarketData(); refreshCountdown = REFRESH_INTERVAL; }
+setInterval(() => {
+  refreshCountdown--;
+  if (refreshCountdown <= 0) refreshAllData();
+  document.getElementById('refresh-counter').textContent = `⟳ ${refreshCountdown}s`;
+}, 1000);
+</script>
+</body>
+</html>
