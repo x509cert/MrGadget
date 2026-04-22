@@ -133,6 +133,8 @@ body {
 .stocks-table th { text-align: left; font-size: 11px; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); }
 .stocks-table td { padding: 8px; border-bottom: 1px solid var(--border); }
 .stocks-table .ticker { font-weight: 700; color: var(--accent); }
+.stocks-table .ticker a { color: var(--accent); text-decoration: none; }
+.stocks-table .ticker a:hover { text-decoration: underline; }
 .stocks-table .price { font-weight: 600; }
 
 /* --- Timezone clocks --- */
@@ -201,12 +203,12 @@ body {
     <table class="stocks-table">
       <thead><tr><th>Ticker</th><th>Price</th><th>Change</th><th>% Change</th></tr></thead>
       <tbody id="stocks-body">
-        <tr><td class="ticker">MSFT</td><td class="price" id="msft-price">—</td><td id="msft-chg">—</td><td id="msft-pct">—</td></tr>
-        <tr><td class="ticker">AAPL</td><td class="price" id="aapl-price">—</td><td id="aapl-chg">—</td><td id="aapl-pct">—</td></tr>
-        <tr><td class="ticker">GOOGL</td><td class="price" id="googl-price">—</td><td id="googl-chg">—</td><td id="googl-pct">—</td></tr>
-        <tr><td class="ticker">AMZN</td><td class="price" id="amzn-price">—</td><td id="amzn-chg">—</td><td id="amzn-pct">—</td></tr>
-        <tr><td class="ticker">NVDA</td><td class="price" id="nvda-price">—</td><td id="nvda-chg">—</td><td id="nvda-pct">—</td></tr>
-        <tr><td class="ticker">META</td><td class="price" id="meta-price">—</td><td id="meta-chg">—</td><td id="meta-pct">—</td></tr>
+        <tr><td class="ticker"><a href="https://finance.yahoo.com/quote/MSFT" target="_blank">MSFT</a></td><td class="price" id="msft-price">—</td><td id="msft-chg">—</td><td id="msft-pct">—</td></tr>
+        <tr><td class="ticker"><a href="https://finance.yahoo.com/quote/AAPL" target="_blank">AAPL</a></td><td class="price" id="aapl-price">—</td><td id="aapl-chg">—</td><td id="aapl-pct">—</td></tr>
+        <tr><td class="ticker"><a href="https://finance.yahoo.com/quote/GOOGL" target="_blank">GOOGL</a></td><td class="price" id="googl-price">—</td><td id="googl-chg">—</td><td id="googl-pct">—</td></tr>
+        <tr><td class="ticker"><a href="https://finance.yahoo.com/quote/AMZN" target="_blank">AMZN</a></td><td class="price" id="amzn-price">—</td><td id="amzn-chg">—</td><td id="amzn-pct">—</td></tr>
+        <tr><td class="ticker"><a href="https://finance.yahoo.com/quote/NVDA" target="_blank">NVDA</a></td><td class="price" id="nvda-price">—</td><td id="nvda-chg">—</td><td id="nvda-pct">—</td></tr>
+        <tr><td class="ticker"><a href="https://finance.yahoo.com/quote/META" target="_blank">META</a></td><td class="price" id="meta-price">—</td><td id="meta-chg">—</td><td id="meta-pct">—</td></tr>
       </tbody>
     </table>
   </div>
